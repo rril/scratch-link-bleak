@@ -10,6 +10,100 @@
 
 On one Ubuntu machine, the WeDo 2.0 repeatedly disconnected via pyscrlink 0.2.8 with `BTLEException: Error from bluepy-helper (badstate)` during a GATT write. Equivalent GATT operations via Bleak succeeded, so this experimental bridge retains the Scratch Link WebSocket protocol while replacing the Bluetooth implementation.
 
+## v0.3 installer preview
+
+v0.3 introduces an **interactive guided installer** that does not require manually
+copying certificate commands. The v0.2.0b1 release remains available while this
+development branch undergoes testing.
+
+To test v0.3 **from this feature branch**, install into a fresh virtual environment:
+
+```bash
+sudo apt install python3-venv libnss3-tools
+git clone https://github.com/rril/scratch-link-bleak.git
+cd scratch-link-bleak
+git switch feature/installer-cert-service
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+scratch-link-bleak --install
+```
+
+The installer asks **separately** before each change:
+1. Generate a private TLS key and local self-signed server (non-CA) certificate,
+   or reuse the existing valid pair.
+2. Import **only the public certificate** into the standard Chrome/Chromium NSS
+   database as a trusted peer (`P,,`). It never installs a system-wide CA.
+3. Add `127.0.0.1 device-manager.scratch.mit.edu` to `/etc/hosts` using
+   `sudo tee -a` **only with your explicit permission**, and only when no
+   conflicting hosts entry exists. You can instead use `sudoedit /etc/hosts`.
+4. Optionally install and enable a `systemd --user` service for automatic
+   startup on login, plus a weekly certificate-expiry reminder timer.
+
+**Restart Chrome completely** after initial setup or certificate renewal.
+The installer targets standard Chrome/Chromium NSS paths on Linux, not custom
+Snap/Flatpak browser trust stores. Run it as your regular desktop user, not root.
+
+Available maintenance commands:
+
+| Command | Purpose |
+|---|---|
+| `scratch-link-bleak --install` | Interactive, safe-to-rerun desktop setup |
+| `scratch-link-bleak --certificate-status` | Show expiry date and warning |
+| `scratch-link-bleak --renew-certificate` | Renew when 30 days or fewer remain, with confirmation and Chrome trust update |
+| `scratch-link-bleak --renew-certificate --force-renew` | Explicitly rotate a still-valid certificate |
+| `scratch-link-bleak --install-service` | Opt in to service and weekly reminder timer |
+| `scratch-link-bleak --remove-service` | Disable/remove our managed service and reminder only |
+| `scratch-link-bleak --setup` | Legacy option: generate TLS files without importing browser trust |
+
+### Certificate lifecycle / renewal
+
+The server warns at startup when the certificate has at most 30 days remaining
+and refuses to start with an expired certificate. If you chose the systemd user
+service, the weekly `scratch-link-bleak-cert-check.timer` also runs a desktop
+notification (when `notify-send` is available).
+
+**Do not silently rotate a trusted server peer:** Chrome trusts the specific
+certificate fingerprint, and renewing it creates a new fingerprint. The
+`--renew-certificate` command therefore requires confirmation, preserves the
+old certificate/key in a private `backups/` directory, and offers to replace
+the matching NSS peer trust. Stop the bridge first:
+
+```bash
+systemctl --user stop scratch-link-bleak  # if you installed the user service
+scratch-link-bleak --renew-certificate
+# Completely quit Chrome and reopen it before using Scratch.
+systemctl --user start scratch-link-bleak # if the service was installed
+```
+
+For a manually started server, stop that process before renewal. If the NSS
+import is interrupted, run `scratch-link-bleak --install` again to trust the
+new public certificate. The old TLS pair remains in
+`~/.local/share/scratch-link-bleak/backups/` for manual recovery. Never share
+the private key or include backups in Git.
+
+### User service
+
+```bash
+scratch-link-bleak --install-service
+systemctl --user status scratch-link-bleak
+systemctl --user status scratch-link-bleak-cert-check.timer
+journalctl --user -u scratch-link-bleak -f
+```
+
+Routine Scratch requests and individual BLE writes are logged only with `--debug`, not at the default INFO level. The systemd service uses INFO to avoid flooding the journal. Important connection/disconnection events and errors remain visible. For a temporary detailed trace, stop the service and run `scratch-link-bleak --debug` manually, then restart the service when finished.
+
+This is a **per-user process**; it does not require running the BLE server as
+root. The service stores the exact Python interpreter path from installation,
+so reinstall it if you move/recreate the virtual environment or pipx installation.
+To undo autostart without touching TLS keys, Chrome trust or /etc/hosts:
+
+```bash
+scratch-link-bleak --remove-service
+```
+
+---
+
 ## Requirements
 
 - Linux desktop with BlueZ and a working BLE adapter, Python >= 3.10.
@@ -113,8 +207,8 @@ Optional flags: `--debug`, `--scan-seconds 15`.
 - [x] Discovery, connect, read, write and notifications over Bleak for LEGO WeDo 2.0.
 - [x] Suppress traceback flood for queued operations after BLE disconnect.
 - [x] Independent TLS certificate generator and documented manual Chrome trust setup (verified on Ubuntu 24.04.5 LTS + Chrome).
-- [ ] WebSocket/reconnect regression suite and better installer UX.
-- [ ] Additional hardware support, optional systemd user service.
+- [x] Guided installer (v0.3 preview; hardware acceptance testing pending).\n- [x] Certificate expiry warning and explicit renewal (v0.3 preview; hardware acceptance testing pending).\n- [ ] WebSocket/reconnect regression suite.
+- [x] Optional systemd user service and weekly expiry check (v0.3 preview; testing pending).\n- [ ] Additional hardware support.
 - [x] BSD 3-Clause license, retaining the original pyscrlink copyright notice.
 - [ ] Test on additional Linux distributions and hardware before claiming broader support.
 

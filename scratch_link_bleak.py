@@ -11,7 +11,7 @@ import socket
 import ssl
 from pathlib import Path
 
-from scratch_link_bleak_tls import CERT_FILE, KEY_FILE, generate_certificate
+from scratch_link_bleak_tls import CERT_FILE, KEY_FILE, generate_certificate, days_remaining, validate_pair
 
 from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
@@ -181,7 +181,7 @@ class Session:
             else:
                 response = 'write-without-response' not in char.properties
             await self.client.write_gatt_char(char, payload, response=response)
-            LOG.info('Write %s: %s bytes (response=%s)', char.uuid, len(payload), response)
+            LOG.debug('Write %s: %s bytes (response=%s)', char.uuid, len(payload), response)
             return len(payload)
         if method == 'read':
             char, _, _ = self.characteristic(params)
@@ -211,7 +211,7 @@ class Session:
                         raise ValueError('Expected JSON-RPC 2.0')
                     method = req['method']
                     params = req.get('params') or {}
-                    LOG.info('Request: %s', method)
+                    LOG.debug('Request: %s', method)
                     result = await self.request(method, params)
                     if 'id' in req:
                         # Keep pyscrlink's legacy no-result response for start/stopNotifications.
@@ -259,12 +259,47 @@ class Session:
 
 async def main():
     parser = argparse.ArgumentParser(description='Experimental WeDo 2.0 Scratch Link using Bleak')
-    parser.add_argument('--setup', action='store_true', help='Create local TLS certificate; does not install browser trust')
+    parser.add_argument('--setup', action='store_true', help='Legacy: create local TLS certificate only')
+    parser.add_argument('--install', action='store_true', help='Guided TLS, Chrome trust, hostname and optional service setup')
+    parser.add_argument('--certificate-status', action='store_true', help='Show certificate expiry and renewal advice')
+    parser.add_argument('--renew-certificate', action='store_true', help='Renew TLS certificate and reconfigure browser trust')
+    parser.add_argument('--force-renew', action='store_true', help='Allow renewal with more than 30 days remaining')
+    parser.add_argument('--install-service', action='store_true', help='Install systemd --user autostart')
+    parser.add_argument('--remove-service', action='store_true', help='Remove managed systemd --user service')
+    parser.add_argument('--notify-cert', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-s', '--scan-seconds', type=float, default=10)
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
                         format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+    if args.force_renew and not args.renew_certificate:
+        parser.error('--force-renew requires --renew-certificate')
+    if sum(bool(v) for v in (args.setup, args.install, args.certificate_status,
+                             args.renew_certificate, args.install_service,
+                             args.remove_service, args.notify_cert)) > 1:
+        parser.error('Select only one maintenance option at a time')
+    if any((args.install, args.certificate_status, args.renew_certificate,
+            args.install_service, args.remove_service, args.notify_cert)):
+        from scratch_link_bleak_setup import (
+            certificate_status, install_interactive, install_service,
+            renew_interactive, uninstall_service,
+        )
+        try:
+            if args.install:
+                install_interactive()
+            elif args.certificate_status:
+                certificate_status()
+            elif args.notify_cert:
+                certificate_status(notify=True)
+            elif args.renew_certificate:
+                renew_interactive(force=args.force_renew)
+            elif args.install_service:
+                install_service(ask=True)
+            elif args.remove_service:
+                uninstall_service()
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        return
     if args.setup:
         try:
             cert, key = generate_certificate()
@@ -282,6 +317,12 @@ async def main():
     resolved = socket.gethostbyname(HOSTNAME)
     if not resolved.startswith('127.'):
         raise SystemExit(f'{HOSTNAME} resolves to {resolved}, not loopback. Check local /etc/hosts mapping.')
+    validate_pair()
+    remaining = days_remaining()
+    if remaining <= 0:
+        raise SystemExit('TLS certificate has expired. Run: scratch-link-bleak --renew-certificate')
+    if remaining <= 30:
+        LOG.warning('TLS certificate expires in %.0f days. Run: scratch-link-bleak --renew-certificate', remaining)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(str(cert), str(key))
     async def handler(ws, path):
