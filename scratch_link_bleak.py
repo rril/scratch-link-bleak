@@ -11,6 +11,8 @@ import socket
 import ssl
 from pathlib import Path
 
+from scratch_link_bleak_tls import CERT_FILE, KEY_FILE, generate_certificate
+
 from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
 from websockets.legacy.server import serve
@@ -257,16 +259,26 @@ class Session:
 
 async def main():
     parser = argparse.ArgumentParser(description='Experimental WeDo 2.0 Scratch Link using Bleak')
+    parser.add_argument('--setup', action='store_true', help='Create local TLS certificate; does not install browser trust')
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-s', '--scan-seconds', type=float, default=10)
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
                         format='%(asctime)s %(levelname)s %(name)s: %(message)s')
-    cert_dir = Path.home() / '.local/share/pyscrlink'
-    cert = cert_dir / 'scratch-device-manager.cer'
-    key = cert_dir / 'scratch-device-manager.key'
+    if args.setup:
+        try:
+            cert, key = generate_certificate()
+        except FileExistsError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f'Created certificate: {cert}')
+        print(f'Created private key: {key} (keep secret)')
+        print('NEXT: import the public certificate as a trusted server peer in your Chrome NSS database.')
+        print('See README.md: Standalone TLS setup. Close and fully restart Chrome after import.')
+        return
+    cert = CERT_FILE
+    key = KEY_FILE
     if not cert.is_file() or not key.is_file():
-        raise SystemExit(f'Existing pyscrlink TLS certificate not found in {cert_dir}. Run original scratch_link once first.')
+        raise SystemExit('Standalone TLS files missing. Run: scratch-link-bleak --setup')
     resolved = socket.gethostbyname(HOSTNAME)
     if not resolved.startswith('127.'):
         raise SystemExit(f'{HOSTNAME} resolves to {resolved}, not loopback. Check local /etc/hosts mapping.')
