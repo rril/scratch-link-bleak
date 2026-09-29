@@ -91,11 +91,17 @@ def install_browser_trust(*, ask=True):
              "-n", NICKNAME, "-i", str(tls.CERT_FILE)])
     except subprocess.CalledProcessError:
         if previous_pem:
-            # Best-effort restoration of the previously trusted public certificate.
-            result = subprocess.run(
-                ["certutil", "-d", f"sql:{db}", "-A", "-t", "P,,", "-n", NICKNAME, "-a"],
-                input=previous_pem, text=True, capture_output=True,
-            )
+            # Restore public certificate without writing the private key or
+            # assuming that certutil reads input PEM from stdin.
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix="scratch-trust-backup-") as directory:
+                old = Path(directory) / "old.crt"
+                old.write_text(previous_pem)
+                result = subprocess.run(
+                    ["certutil", "-d", f"sql:{db}", "-A", "-t", "P,,",
+                     "-n", NICKNAME, "-i", str(old)],
+                    text=True, capture_output=True,
+                )
             if result.returncode != 0:
                 print("WARNING: old NSS peer trust could not be restored; see README.")
         raise
@@ -179,8 +185,24 @@ def install_service(*, ask=True, start=True):
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(unit)
+    # A weekly reminder uses the normal desktop notification daemon when present.
+    # It never renews the TLS peer silently (that would invalidate Chrome's trust).
+    cert_unit = path.parent / "scratch-link-bleak-cert-check.service"
+    cert_timer = path.parent / "scratch-link-bleak-cert-check.timer"
+    cert_unit.write_text(
+        SERVICE_HEADER + "\\n[Unit]\\nDescription=Check Scratch Link Bleak TLS expiry\\n"
+        "[Service]\\nType=oneshot\\n"
+        f'ExecStart="{executable}" -m scratch_link_bleak --notify-cert\\n'
+    )
+    cert_timer.write_text(
+        SERVICE_HEADER + "\\n[Unit]\\nDescription=Weekly Scratch Link Bleak TLS reminder\\n"
+        "[Timer]\\nOnCalendar=weekly\\nPersistent=true\\n"
+        "Unit=scratch-link-bleak-cert-check.service\\n"
+        "[Install]\\nWantedBy=timers.target\\n"
+    )
     run(["systemctl", "--user", "daemon-reload"])
     run(["systemctl", "--user", "enable", "--now" if start else "--no-reload", SERVICE_NAME])
+    run(["systemctl", "--user", "enable", "--now", "scratch-link-bleak-cert-check.timer"])
     print(f"Installed systemd user service: {path}")
     print("Use: systemctl --user status scratch-link-bleak")
     return True
@@ -193,6 +215,13 @@ def uninstall_service():
     if not confirm(f"Disable and remove {path}?"):
         return False
     run(["systemctl", "--user", "disable", "--now", SERVICE_NAME])
+    timer = path.parent / "scratch-link-bleak-cert-check.timer"
+    reminder = path.parent / "scratch-link-bleak-cert-check.service"
+    if timer.exists() and timer.read_text().startswith(SERVICE_HEADER):
+        run(["systemctl", "--user", "disable", "--now", timer.name])
+        timer.unlink()
+    if reminder.exists() and reminder.read_text().startswith(SERVICE_HEADER):
+        reminder.unlink()
     path.unlink()
     run(["systemctl", "--user", "daemon-reload"])
     print("Service removed. TLS keys, Chrome trust and /etc/hosts were preserved.")
@@ -229,6 +258,11 @@ def renew_interactive(*, force=False):
         raise RuntimeError(
             "Stop the running user service first: systemctl --user stop scratch-link-bleak"
         )
+    # Avoid changing the files underneath any manually launched server, too.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(0.3)
+        if probe.connect_ex(("127.0.0.1", 20110)) == 0:
+            raise RuntimeError("Port 20110 is in use. Stop Scratch Link before renewing.")
     if not tls.CERT_FILE.is_file() or not tls.KEY_FILE.is_file():
         raise RuntimeError("Missing TLS files. Run scratch-link-bleak --install.")
     days = tls.days_remaining()
