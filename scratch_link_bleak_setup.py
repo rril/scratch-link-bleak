@@ -84,7 +84,9 @@ def install_browser_trust(*, ask=True):
     previous_pem = None
     if existing:
         result = run(["certutil", "-d", f"sql:{db}", "-L", "-n", NICKNAME, "-a"], capture=True)
-        previous_pem = result.stdout
+        begin = result.stdout.index("-----BEGIN CERTIFICATE-----")
+        end = result.stdout.index("-----END CERTIFICATE-----", begin) + len("-----END CERTIFICATE-----")
+        previous_pem = result.stdout[begin:end] + "\\n"
         run(["certutil", "-d", f"sql:{db}", "-D", "-n", NICKNAME])
     try:
         run(["certutil", "-d", f"sql:{db}", "-A", "-t", "P,,",
@@ -173,6 +175,11 @@ def install_service(*, ask=True, start=True):
         raise RuntimeError(f"Existing service at {path} is not managed by this application.")
     if ask and not confirm("Install and enable scratch-link-bleak as a systemd --user service?"):
         return False
+    if not service_active():
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.3)
+            if probe.connect_ex(("127.0.0.1", 20110)) == 0:
+                raise RuntimeError("Port 20110 is in use. Stop the manually running Scratch Link first.")
     executable = sys.executable.replace("%", "%%").replace('"', r'\"')
     unit = (
         SERVICE_HEADER + "\n"
@@ -298,8 +305,13 @@ def install_interactive():
         print("Certificate expires soon; renew it separately before installation.")
     install_browser_trust(ask=True)
     configure_local_hostname(ask=True)
-    if confirm("Also install automatic startup via systemd --user?"):
-        install_service(ask=False)
+    trusted = installed_fingerprint(nss_database()) == tls.certificate_fingerprint()
+    if trusted and is_loopback():
+        if confirm("Also install automatic startup via systemd --user?"):
+            install_service(ask=False)
+    else:
+        print("Skipped systemd autostart because browser trust or local hostname setup is incomplete.")
+        print("Finish those steps and re-run --install (or --install-service) when ready.")
     print("Installation finished. Fully restart Chrome before testing Scratch.")
     if not is_loopback():
         print("ATTENTION: Scratch hostname must resolve to 127.0.0.1; see instructions above.")
