@@ -190,15 +190,15 @@ def install_service(*, ask=True, start=True):
     cert_unit = path.parent / "scratch-link-bleak-cert-check.service"
     cert_timer = path.parent / "scratch-link-bleak-cert-check.timer"
     cert_unit.write_text(
-        SERVICE_HEADER + "\\n[Unit]\\nDescription=Check Scratch Link Bleak TLS expiry\\n"
-        "[Service]\\nType=oneshot\\n"
-        f'ExecStart="{executable}" -m scratch_link_bleak --notify-cert\\n'
+        SERVICE_HEADER + "\n[Unit]\nDescription=Check Scratch Link Bleak TLS expiry\n"
+        "[Service]\nType=oneshot\n"
+        f'ExecStart="{executable}" -m scratch_link_bleak --notify-cert\n'
     )
     cert_timer.write_text(
-        SERVICE_HEADER + "\\n[Unit]\\nDescription=Weekly Scratch Link Bleak TLS reminder\\n"
-        "[Timer]\\nOnCalendar=weekly\\nPersistent=true\\n"
-        "Unit=scratch-link-bleak-cert-check.service\\n"
-        "[Install]\\nWantedBy=timers.target\\n"
+        SERVICE_HEADER + "\n[Unit]\nDescription=Weekly Scratch Link Bleak TLS reminder\n"
+        "[Timer]\nOnCalendar=weekly\nPersistent=true\n"
+        "Unit=scratch-link-bleak-cert-check.service\n"
+        "[Install]\nWantedBy=timers.target\n"
     )
     run(["systemctl", "--user", "daemon-reload"])
     run(["systemctl", "--user", "enable", "--now" if start else "--no-reload", SERVICE_NAME])
