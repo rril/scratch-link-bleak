@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scratch-link-bleak"
-version = "0.2.0.dev0"
+version = "0.2.0b1"
 description = "Experimental unofficial Scratch Link BLE bridge for LEGO WeDo 2.0 on Linux"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Education",
 ]
 keywords = ["scratch", "lego", "wedo", "ble", "linux"]
-# License selection pending code provenance review.
+license = "BSD-3-Clause"
 
 [project.scripts]
 scratch-link-bleak = "scratch_link_bleak_cli:run"
