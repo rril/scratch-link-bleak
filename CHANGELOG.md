@@ -7,7 +7,9 @@
 - Explicit `--renew-certificate` with recoverable private backups and Chrome trust update. Silent certificate replacement is deliberately avoided.
 - Optional `systemd --user` service, accompanied by a weekly expiry reminder timer and `--remove-service`.
 - Unit tests for expiry, rotation, Chrome peer trust, consent, and service unit generation.
-- Current beta release v0.2.0b1 remains available during desktop/hardware acceptance testing.
+- Routine JSON-RPC requests and BLE writes moved from INFO to DEBUG to avoid flooding systemd journal.
+- Owner-verified Ubuntu/Chrome/WeDo acceptance test: installation and user service, motor and sensors, power-off/disconnect and multiple reconnects succeeded.
+- Current beta release v0.2.0b1 remains available until v0.3.0b1 is published.
 
 ## 0.2.0b1 — standalone TLS beta (2026-09-29)
 
