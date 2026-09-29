@@ -4,7 +4,7 @@
 
 **Unofficial, experimental Scratch Link BLE bridge for Linux** using [Bleak](https://github.com/hbldh/bleak) (BlueZ/D-Bus) rather than bluepy. No installation of pyscrlink or reuse of its files is needed.
 
-**Verified setup (previous prototype):** LEGO WeDo 2.0 (LPF2 Smart Hub), Ubuntu 24.04.5 LTS, Chrome and the official [Scratch editor](https://scratch.mit.edu/projects/editor/). A one-hour hardware session was successful and the disconnect flood was corrected. **The new standalone certificate setup needs fresh on-device verification.**
+**Verified setup:** LEGO WeDo 2.0 (LPF2 Smart Hub), Ubuntu 24.04.5 LTS, Chrome and the official [Scratch editor](https://scratch.mit.edu/projects/editor/). A one-hour hardware session was successful. The standalone installation was separately verified in a fresh Python environment without pyscrlink/bluepy: new TLS certificate and Chrome trust, motor and sensors, disconnect and reconnect. Other hardware and distributions remain untested.
 
 ## Why?
 
@@ -18,13 +18,12 @@ On one Ubuntu machine, the WeDo 2.0 repeatedly disconnected via pyscrlink 0.2.8 
 - `libnss3-tools` to import the public certificate into Chrome's NSS store.
 - No `pyscrlink`, `bluepy`, or `bluepy-helper` installation required.
 
-## Standalone installation (development branch)
+## Standalone installation
 
 ```bash
 sudo apt install python3-venv libnss3-tools
 git clone https://github.com/rril/scratch-link-bleak.git
 cd scratch-link-bleak
-git switch initial-bleak-release   # omit after PR #1 is merged
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install .
@@ -113,7 +112,7 @@ Optional flags: `--debug`, `--scan-seconds 15`.
 
 - [x] Discovery, connect, read, write and notifications over Bleak for LEGO WeDo 2.0.
 - [x] Suppress traceback flood for queued operations after BLE disconnect.
-- [x] Independent TLS certificate generator and documented manual Chrome trust setup (**needs device testing**).
+- [x] Independent TLS certificate generator and documented manual Chrome trust setup (verified on Ubuntu 24.04.5 LTS + Chrome).
 - [ ] WebSocket/reconnect regression suite and better installer UX.
 - [ ] Additional hardware support, optional systemd user service.
 - [x] BSD 3-Clause license, retaining the original pyscrlink copyright notice.
