@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scratch-link-bleak"
-version = "0.1.1"
+version = "0.2.0.dev0"
 description = "Experimental unofficial Scratch Link BLE bridge for LEGO WeDo 2.0 on Linux"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "bleak>=0.22,<3",
     "websockets==13.1",
+    "cryptography>=42,<47",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -20,7 +21,7 @@ classifiers = [
     "Topic :: Education",
 ]
 keywords = ["scratch", "lego", "wedo", "ble", "linux"]
-# License is intentionally pending provenance review.
+# License selection pending code provenance review.
 
 [project.scripts]
 scratch-link-bleak = "scratch_link_bleak_cli:run"
@@ -30,4 +31,4 @@ Repository = "https://github.com/rril/scratch-link-bleak"
 Issues = "https://github.com/rril/scratch-link-bleak/issues"
 
 [tool.setuptools]
-py-modules = ["scratch_link_bleak", "scratch_link_bleak_cli"]
+py-modules = ["scratch_link_bleak", "scratch_link_bleak_cli", "scratch_link_bleak_tls"]
