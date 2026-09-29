@@ -181,7 +181,7 @@ class Session:
             else:
                 response = 'write-without-response' not in char.properties
             await self.client.write_gatt_char(char, payload, response=response)
-            LOG.info('Write %s: %s bytes (response=%s)', char.uuid, len(payload), response)
+            LOG.debug('Write %s: %s bytes (response=%s)', char.uuid, len(payload), response)
             return len(payload)
         if method == 'read':
             char, _, _ = self.characteristic(params)
@@ -211,7 +211,7 @@ class Session:
                         raise ValueError('Expected JSON-RPC 2.0')
                     method = req['method']
                     params = req.get('params') or {}
-                    LOG.info('Request: %s', method)
+                    LOG.debug('Request: %s', method)
                     result = await self.request(method, params)
                     if 'id' in req:
                         # Keep pyscrlink's legacy no-result response for start/stopNotifications.
