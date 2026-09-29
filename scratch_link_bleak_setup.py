@@ -288,6 +288,10 @@ def renew_interactive(*, force=False):
         print(f"New certificate generated, but NSS import failed: {exc}")
         print("Run scratch-link-bleak --install to import the new public certificate.")
         raise
+    if installed_fingerprint(nss_database()) != tls.certificate_fingerprint():
+        print("WARNING: Chrome does NOT yet trust the renewed certificate.")
+        print("Run scratch-link-bleak --install to complete the browser trust update.")
+        return False
     print("Restart Chrome completely, then restart the user service (if installed).")
     return True
 
@@ -301,6 +305,8 @@ def install_interactive():
         tls.generate_certificate()
         print(f"Generated certificate at {tls.CERT_FILE} and private key at {tls.KEY_FILE}.")
     tls.validate_pair()
+    if tls.days_remaining() <= 0:
+        raise RuntimeError("Certificate already expired. Run scratch-link-bleak --renew-certificate first.")
     if tls.days_remaining() <= 30:
         print("Certificate expires soon; renew it separately before installation.")
     install_browser_trust(ask=True)
