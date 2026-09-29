@@ -10,24 +10,22 @@
 
 On one Ubuntu machine, the WeDo 2.0 repeatedly disconnected via pyscrlink 0.2.8 with `BTLEException: Error from bluepy-helper (badstate)` during a GATT write. Equivalent GATT operations via Bleak succeeded, so this experimental bridge retains the Scratch Link WebSocket protocol while replacing the Bluetooth implementation.
 
-## v0.3 installer preview
+## Recommended installation (v0.3 beta)
 
-v0.3 introduces an **interactive guided installer** that does not require manually
-copying certificate commands. The v0.2.0b1 release remains available while this
-development branch undergoes testing.
-
-To test v0.3 **from this feature branch**, install into a fresh virtual environment:
+The **interactive guided installer** replaces most of the manual certificate
+and local setup. After the v0.3.0b1 release reaches PyPI, run:
 
 ```bash
-sudo apt install python3-venv libnss3-tools
-git clone https://github.com/rril/scratch-link-bleak.git
-cd scratch-link-bleak
-git switch feature/installer-cert-service
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install .
+sudo apt install pipx libnss3-tools
+pipx ensurepath
+# Open a new terminal if pipx was not already on PATH.
+pipx install 'scratch-link-bleak==0.3.0b1'
 scratch-link-bleak --install
 ```
+
+For an existing pipx installation, use `pipx upgrade scratch-link-bleak --pip-args='--pre'`
+after the beta is available. Until then, the tested v0.2.0b1 release remains
+available from PyPI. The development code is already on the GitHub main branch.
 
 The installer asks **separately** before each change:
 1. Generate a private TLS key and local self-signed server (non-CA) certificate,
@@ -112,7 +110,7 @@ scratch-link-bleak --remove-service
 - `libnss3-tools` to import the public certificate into Chrome's NSS store.
 - No `pyscrlink`, `bluepy`, or `bluepy-helper` installation required.
 
-## Standalone installation
+## Manual certificate setup (alternative)
 
 ```bash
 sudo apt install python3-venv libnss3-tools
