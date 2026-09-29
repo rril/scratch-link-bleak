@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scratch-link-bleak"
-version = "0.2.0b1"
+version = "0.3.0b1"
 description = "Experimental unofficial Scratch Link BLE bridge for LEGO WeDo 2.0 on Linux"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,4 +31,4 @@ Repository = "https://github.com/rril/scratch-link-bleak"
 Issues = "https://github.com/rril/scratch-link-bleak/issues"
 
 [tool.setuptools]
-py-modules = ["scratch_link_bleak", "scratch_link_bleak_cli", "scratch_link_bleak_tls"]
+py-modules = ["scratch_link_bleak", "scratch_link_bleak_cli", "scratch_link_bleak_tls", "scratch_link_bleak_setup"]
