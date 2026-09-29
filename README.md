@@ -91,6 +91,8 @@ systemctl --user status scratch-link-bleak-cert-check.timer
 journalctl --user -u scratch-link-bleak -f
 ```
 
+Routine Scratch requests and individual BLE writes are logged only with `--debug`, not at the default INFO level. The systemd service uses INFO to avoid flooding the journal. Important connection/disconnection events and errors remain visible. For a temporary detailed trace, stop the service and run `scratch-link-bleak --debug` manually, then restart the service when finished.
+
 This is a **per-user process**; it does not require running the BLE server as
 root. The service stores the exact Python interpreter path from installation,
 so reinstall it if you move/recreate the virtual environment or pipx installation.
