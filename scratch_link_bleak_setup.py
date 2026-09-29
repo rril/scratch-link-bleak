@@ -166,6 +166,8 @@ def service_active():
 
 
 def install_service(*, ask=True, start=True):
+    if os.geteuid() == 0:
+        raise RuntimeError("Use systemd --user from your regular desktop account, not sudo.")
     if shutil.which("systemctl") is None:
         raise RuntimeError("systemctl not found: systemd --user is unavailable.")
     if not tls.CERT_FILE.is_file() or not tls.KEY_FILE.is_file():
@@ -216,6 +218,8 @@ def install_service(*, ask=True, start=True):
 
 
 def uninstall_service():
+    if os.geteuid() == 0:
+        raise RuntimeError("Run as your desktop user, not sudo.")
     path = service_path()
     if not path.is_file() or not path.read_text().startswith(SERVICE_HEADER):
         raise RuntimeError("No managed scratch-link-bleak.service found.")
@@ -261,6 +265,8 @@ def certificate_status(*, notify=False):
 
 
 def renew_interactive(*, force=False):
+    if os.geteuid() == 0:
+        raise RuntimeError("Run certificate renewal as your desktop user, not sudo.")
     if service_active():
         raise RuntimeError(
             "Stop the running user service first: systemctl --user stop scratch-link-bleak"
