@@ -86,7 +86,7 @@ def install_browser_trust(*, ask=True):
         result = run(["certutil", "-d", f"sql:{db}", "-L", "-n", NICKNAME, "-a"], capture=True)
         begin = result.stdout.index("-----BEGIN CERTIFICATE-----")
         end = result.stdout.index("-----END CERTIFICATE-----", begin) + len("-----END CERTIFICATE-----")
-        previous_pem = result.stdout[begin:end] + "\\n"
+        previous_pem = result.stdout[begin:end] + "\n"
         run(["certutil", "-d", f"sql:{db}", "-D", "-n", NICKNAME])
     try:
         run(["certutil", "-d", f"sql:{db}", "-A", "-t", "P,,",
