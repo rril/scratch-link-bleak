@@ -1,5 +1,7 @@
 # Scratch Link Bleak
 
+[![Python smoke tests](https://github.com/rril/scratch-link-bleak/actions/workflows/python.yml/badge.svg)](https://github.com/rril/scratch-link-bleak/actions/workflows/python.yml)
+
 **Unofficial, experimental Scratch Link BLE bridge for Linux** using [Bleak](https://github.com/hbldh/bleak) (BlueZ/D-Bus) rather than bluepy. No installation of pyscrlink or reuse of its files is needed.
 
 **Verified setup (previous prototype):** LEGO WeDo 2.0 (LPF2 Smart Hub), Ubuntu 24.04.5 LTS, Chrome and the official [Scratch editor](https://scratch.mit.edu/projects/editor/). A one-hour hardware session was successful and the disconnect flood was corrected. **The new standalone certificate setup needs fresh on-device verification.**
@@ -114,7 +116,14 @@ Optional flags: `--debug`, `--scan-seconds 15`.
 - [x] Independent TLS certificate generator and documented manual Chrome trust setup (**needs device testing**).
 - [ ] WebSocket/reconnect regression suite and better installer UX.
 - [ ] Additional hardware support, optional systemd user service.
-- [ ] License/provenance review before a tagged public release or PyPI upload.
+- [x] BSD 3-Clause license, retaining the original pyscrlink copyright notice.
+- [ ] Test on additional Linux distributions and hardware before claiming broader support.
+
+## License and adoption
+
+[BSD 3-Clause](LICENSE). Commercial use, modification, proprietary redistribution and integration into an official product are permitted under the license conditions, including retaining the applicable notices and not implying endorsement.
+
+LEGO, the Scratch Foundation, and others are welcome to adopt or contribute to this project. This invitation does not imply affiliation or endorsement, or grant any trademark rights.
 
 ## Acknowledgements
 
